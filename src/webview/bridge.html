@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'nonce-{{nonce}}' {{cspSource}};" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CC Speaker Audio Bridge</title>
+</head>
+<body>
+  <!-- Hidden webview — runs Web Speech API on behalf of the extension host -->
+  <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+{
+  "name": "vscode-cc-speaker",
+  "displayName": "CC Speaker",
+  "description": "Voice capabilities for Claude VS Code — TTS and STT via Web Speech API",
+  "version": "0.1.0",
+  "publisher": "vscode-cc-speaker",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "voice.toggleTTS",
+        "title": "Voice: Toggle Read Aloud"
+      },
+      {
+        "command": "voice.speakSelection",
+        "title": "Voice: Speak Selected Text"
+      },
+      {
+        "command": "voice.stopSpeaking",
+        "title": "Voice: Stop Speaking"
+      },
+      {
+        "command": "voice.startListening",
+        "title": "Voice: Start Listening"
+      },
+      {
+        "command": "voice.stopListening",
+        "title": "Voice: Stop Listening"
+      },
+      {
+        "command": "voice.openSettings",
+        "title": "Voice: Open Settings"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "voice.speakSelection",
+        "key": "ctrl+alt+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "voice.stopSpeaking",
+        "key": "ctrl+alt+x"
+      },
+      {
+        "command": "voice.startListening",
+        "key": "ctrl+alt+m"
+      },
+      {
+        "command": "voice.stopListening",
+        "key": "ctrl+alt+."
+      }
+    ],
+    "configuration": {
+      "title": "Voice (CC Speaker)",
+      "properties": {
+        "voice.tts.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable text-to-speech"
+        },
+        "voice.tts.autoRead": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-read Claude responses as they appear"
+        },
+        "voice.tts.rate": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.5,
+          "maximum": 2,
+          "description": "Speech rate (0.5 = slow, 2.0 = fast)"
+        },
+        "voice.tts.pitch": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.5,
+          "maximum": 2,
+          "description": "Speech pitch"
+        },
+        "voice.tts.voice": {
+          "type": "string",
+          "default": "",
+          "description": "Voice name (leave empty for system default)"
+        },
+        "voice.stt.provider": {
+          "type": "string",
+          "enum": [
+            "webSpeech",
+            "whisper"
+          ],
+          "default": "webSpeech",
+          "description": "Speech-to-text provider"
+        },
+        "voice.stt.whisperApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API key for Whisper STT provider"
+        },
+        "voice.stt.wakeWord": {
+          "type": "string",
+          "default": "hey claude",
+          "description": "Wake word for always-on listening mode"
+        },
+        "voice.stt.alwaysOn": {
+          "type": "boolean",
+          "default": false,
+          "description": "Always-on listening mode (requires wake word)"
+        },
+        "voice.claude.watchFile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Watch a file for Claude Code chat responses and read them aloud automatically. Requires a Claude Code hook to write responses to the file."
+        },
+        "voice.claude.watchFilePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the file Claude Code hooks write responses to. Defaults to ~/.claude/cc_speaker.txt if left empty."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "compile": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}
