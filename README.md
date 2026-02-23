@@ -41,7 +41,25 @@ No external API keys required for basic use — runs entirely via the browser's 
 
 ## Installation
 
-### Option A — Install from VSIX (recommended)
+### Option A — Install pre-built VSIX (recommended)
+
+A pre-built `.vsix` is included in the repo — no build step needed.
+
+**Via VS Code Extensions UI:**
+1. Clone or download the repo
+2. Open the Extensions sidebar (`Ctrl+Shift+X`)
+3. Click the `···` menu (top-right of the panel) → **Install from VSIX...**
+4. Select `vscode-cc-speaker-0.1.2.vsix`
+
+**Via terminal:**
+```bash
+git clone https://github.com/nickxar1/vscode-cc-speaker
+code --install-extension vscode-cc-speaker/vscode-cc-speaker-0.1.2.vsix
+```
+
+The extension loads automatically in every VS Code window from then on.
+
+### Option B — Build from source
 
 ```bash
 git clone https://github.com/nickxar1/vscode-cc-speaker
@@ -49,12 +67,10 @@ cd vscode-cc-speaker
 npm install
 npm run build
 vsce package
-code --install-extension vscode-cc-speaker-0.1.0.vsix
+code --install-extension vscode-cc-speaker-0.1.2.vsix
 ```
 
-The extension loads automatically in every VS Code window from then on.
-
-### Option B — Development mode (F5)
+### Option C — Development mode (F5)
 
 Open the folder in VS Code and press **F5** — a second VS Code window (Extension Development Host) launches with the extension active. Useful for live debugging.
 
