@@ -171,7 +171,7 @@ export class TTSController implements vscode.Disposable {
       placeHolder: 'Search voices...',
     });
     if (!pick) { return; }
-    await config.update('voice.tts.voice', pick.voice, vscode.ConfigurationTarget.Global);
+    await config.update('tts.voice', pick.voice, vscode.ConfigurationTarget.Global);
     vscode.window.showInformationMessage(
       `CC Speaker: Voice set to "${pick.voice || 'system default'}"`
     );
