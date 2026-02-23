@@ -2,7 +2,7 @@
   "name": "vscode-cc-speaker",
   "displayName": "CC Speaker",
   "description": "Voice capabilities for Claude VS Code — TTS and STT via Web Speech API",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "publisher": "vscode-cc-speaker",
   "repository": {
     "type": "git",
@@ -43,8 +43,22 @@
       {
         "command": "voice.openSettings",
         "title": "Voice: Open Settings"
+      },
+      {
+        "command": "voice.pickVoice",
+        "title": "Voice: Pick Voice"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "ccSpeakerBridge",
+          "name": "CC Speaker",
+          "icon": "$(unmute)"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "voice.speakSelection",

@@ -5,50 +5,56 @@ import { EventEmitter } from 'events';
 
 type BridgeMessage = Record<string, unknown>;
 
-export class AudioBridge implements vscode.Disposable {
-  private panel: vscode.WebviewPanel;
+export class AudioBridge implements vscode.WebviewViewProvider, vscode.Disposable {
+  private _view?: vscode.WebviewView;
   private _emitter = new EventEmitter();
   readonly onMessage: EventEmitter = this._emitter;
-  private _disposed = false;
+  private _pendingMessages: BridgeMessage[] = [];
 
   constructor(private readonly context: vscode.ExtensionContext) {
-    this.panel = this.createPanel();
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider('ccSpeakerBridge', this, {
+        webviewOptions: { retainContextWhenHidden: true },
+      })
+    );
   }
 
-  private createPanel(): vscode.WebviewPanel {
+  // Called by VS Code when the sidebar view becomes visible for the first time
+  resolveWebviewView(webviewView: vscode.WebviewView): void {
+    this._view = webviewView;
     const webviewDir = vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview');
 
-    const panel = vscode.window.createWebviewPanel(
-      'ccSpeakerBridge',
-      'CC Speaker Bridge',
-      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [webviewDir],
-      }
-    );
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [webviewDir],
+    };
 
-    panel.webview.html = this.getWebviewContent(panel.webview, webviewDir);
+    webviewView.webview.html = this.getWebviewContent(webviewView.webview, webviewDir);
 
-    panel.webview.onDidReceiveMessage(
+    webviewView.webview.onDidReceiveMessage(
       (msg: BridgeMessage) => this._emitter.emit('message', msg),
       undefined,
       this.context.subscriptions
     );
 
-    // Recreate panel if user closes it
-    panel.onDidDispose(() => {
-      if (!this._disposed) {
-        this.panel = this.createPanel();
-      }
+    webviewView.onDidDispose(() => {
+      this._view = undefined;
     }, null, this.context.subscriptions);
 
-    return panel;
+    // Flush messages queued before the view was ready
+    for (const msg of this._pendingMessages) {
+      void webviewView.webview.postMessage(msg);
+    }
+    this._pendingMessages = [];
   }
 
   send(message: BridgeMessage): void {
-    this.panel.webview.postMessage(message);
+    if (this._view) {
+      void this._view.webview.postMessage(message);
+    } else {
+      // View not yet resolved — queue for when it initialises
+      this._pendingMessages.push(message);
+    }
   }
 
   private getWebviewContent(webview: vscode.Webview, webviewDir: vscode.Uri): string {
@@ -67,8 +73,7 @@ export class AudioBridge implements vscode.Disposable {
   }
 
   dispose(): void {
-    this._disposed = true;
-    this.panel.dispose();
+    // Subscriptions registered on context are cleaned up automatically
   }
 }
 

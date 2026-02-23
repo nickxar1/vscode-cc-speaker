@@ -10,9 +10,12 @@ No external API keys required for basic use — runs entirely via the browser's 
 
 ### Phase 1 — Text-to-Speech (TTS) ✅
 - **Speak selected text** — select anything in the editor and read it aloud
-- **Auto-read** — automatically reads file changes as they happen (e.g. when Claude Code edits a file)
+- **Auto-read Claude responses** — reads Claude Code chat responses aloud via file watcher + hook (see setup below)
 - **Markdown stripping** — removes `**`, `#`, backticks before speaking so formatting symbols aren't read aloud
 - **Code block detection** — announces "code block" instead of reading raw code
+- **Pronunciation fixes** — CamelCase split, ALL_CAPS spelled out, known words corrected (`README` → "read me", etc.)
+- **Smarter debounce** — auto-read waits for typing to stop (2 s silence) before speaking
+- **Voice picker** — `Ctrl+Shift+P` → `Voice: Pick Voice` to choose from available system voices
 - **Text queue** — rapid successive messages are queued and spoken in order
 - **Status bar** — always-visible `Voice` item in the bottom-right shows current state
 
@@ -36,16 +39,24 @@ No external API keys required for basic use — runs entirely via the browser's 
 
 ---
 
-## Installation (Development)
+## Installation
+
+### Option A — Install from VSIX (recommended)
 
 ```bash
-git clone https://github.com/yourname/vscode-cc-speaker
+git clone https://github.com/nickxar1/vscode-cc-speaker
 cd vscode-cc-speaker
 npm install
 npm run build
+vsce package
+code --install-extension vscode-cc-speaker-0.1.0.vsix
 ```
 
-Then open the folder in VS Code and press **F5** — a second VS Code window (Extension Development Host) launches with the extension active.
+The extension loads automatically in every VS Code window from then on.
+
+### Option B — Development mode (F5)
+
+Open the folder in VS Code and press **F5** — a second VS Code window (Extension Development Host) launches with the extension active. Useful for live debugging.
 
 ---
 
@@ -56,7 +67,6 @@ Open settings via `Ctrl+Shift+P` → **Voice: Open Settings**, or search for `vo
 | Setting | Default | Description |
 |---|---|---|
 | `voice.tts.enabled` | `true` | Enable/disable TTS globally |
-| `voice.tts.autoRead` | `true` | Auto-read document changes |
 | `voice.tts.rate` | `1.0` | Speech rate (0.5 slow → 2.0 fast) |
 | `voice.tts.pitch` | `1.0` | Speech pitch (0.5 → 2.0) |
 | `voice.tts.voice` | `""` | Voice name (empty = system default) |
@@ -64,6 +74,8 @@ Open settings via `Ctrl+Shift+P` → **Voice: Open Settings**, or search for `vo
 | `voice.stt.whisperApiKey` | `""` | OpenAI key (only for Whisper) |
 | `voice.stt.wakeWord` | `hey claude` | Wake word for always-on mode |
 | `voice.stt.alwaysOn` | `false` | Always-on continuous listening |
+| `voice.claude.watchFile` | `false` | Watch file for Claude Code chat responses |
+| `voice.claude.watchFilePath` | `""` | Path to watch file (default: `~/.claude/cc_speaker.txt`) |
 
 ---
 
@@ -125,11 +137,11 @@ This hook runs when Claude Code finishes a response and appends the text to the 
 
 ## Roadmap
 
-- [ ] Auto-read Claude Code **chat responses** (not just file edits) — pending investigation of Claude extension's event API
-- [ ] Voice picker UI — dropdown of available system voices
+- [x] Auto-read Claude Code **chat responses** via file watcher + Claude Code hook
+- [x] Voice picker UI — `Voice: Pick Voice` command lists all available system voices
+- [x] Suppress auto-read during active typing (smarter debounce)
+- [x] Hide the Bridge tab — now a collapsible sidebar WebviewView in Explorer
 - [ ] Whisper STT backend for higher accuracy
-- [ ] Suppress auto-read during active typing (smarter debounce)
-- [ ] Hide the Bridge tab (use a sidebar WebviewView instead)
 
 ---
 

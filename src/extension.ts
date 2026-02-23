@@ -66,7 +66,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('voice.openSettings', () => {
       vscode.commands.executeCommand('workbench.action.openSettings', 'voice');
     }),
+
+    vscode.commands.registerCommand('voice.pickVoice', () => {
+      void tts.pickVoice();
+    }),
   ];
+
+  // Reveal the bridge view immediately so it initialises — user can collapse it
+  void vscode.commands.executeCommand('ccSpeakerBridge.focus');
 
   context.subscriptions.push(statusBar, bridge, tts, ...commands);
 }

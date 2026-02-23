@@ -12,10 +12,12 @@ export class TTSController implements vscode.Disposable {
   private queue: string[] = [];
   private isSpeaking = false;
   private statusCallback: StatusCallback = () => { /* noop */ };
-  private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private fileWatcher: fs.FSWatcher | undefined;
   private lastFileSize = 0;
+  private availableVoices: string[] = [];
+  private lastTypedAt = 0;
+  private pendingSpeakTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly bridge: AudioBridge,
@@ -37,27 +39,16 @@ export class TTSController implements vscode.Disposable {
           this.statusCallback('$(circle-slash)', `TTS error: ${msg['message'] as string}`);
           this.drainQueue();
           break;
+        case 'voicesLoaded':
+          this.availableVoices = (msg['voices'] as string[] | undefined) ?? [];
+          break;
       }
     });
 
-    // Auto-read: watch document changes, debounced 500ms
-    const docWatcher = vscode.workspace.onDidChangeTextDocument((event) => {
-      const config = vscode.workspace.getConfiguration('voice');
-      if (!config.get<boolean>('tts.enabled', true)) { return; }
-      if (!config.get<boolean>('tts.autoRead', true)) { return; }
-
-      if (this.debounceTimer) { clearTimeout(this.debounceTimer); }
-
-      this.debounceTimer = setTimeout(() => {
-        const addedText = event.contentChanges
-          .map((c) => c.text)
-          .join('');
-        // Only speak meaningful chunks, ignore tiny whitespace edits
-        if (addedText.trim().length > 10) {
-          this.speak(addedText);
-        }
-      }, 500);
-    });
+    // Track typing so auto-read is suppressed while the user is actively typing
+    this.disposables.push(
+      vscode.workspace.onDidChangeTextDocument(() => { this.lastTypedAt = Date.now(); })
+    );
 
     // Re-apply file watcher whenever config changes
     const configWatcher = vscode.workspace.onDidChangeConfiguration((e) => {
@@ -66,7 +57,7 @@ export class TTSController implements vscode.Disposable {
       }
     });
 
-    this.disposables.push(docWatcher, configWatcher);
+    this.disposables.push(configWatcher);
     void context;
 
     // Start file watcher if already enabled in settings
@@ -151,14 +142,57 @@ export class TTSController implements vscode.Disposable {
 
       const newText = buf.toString('utf8').trim();
       if (newText.length > 0) {
-        this.speak(newText);
+        this.scheduleSpeak(newText);
       }
     } catch {
       // File may be temporarily locked — ignore
     }
   }
 
+  // ── Voice picker ──────────────────────────────────────────────────────────
+
+  async pickVoice(): Promise<void> {
+    if (this.availableVoices.length === 0) {
+      vscode.window.showInformationMessage('CC Speaker: No voices loaded yet — try again in a moment.');
+      return;
+    }
+    const config = vscode.workspace.getConfiguration('voice');
+    const current = config.get<string>('tts.voice', '');
+    const items = [
+      { label: '$(unmute) System default', description: current === '' ? '(current)' : '', voice: '' },
+      ...this.availableVoices.map((v) => ({
+        label: v,
+        description: v === current ? '(current)' : '',
+        voice: v,
+      })),
+    ];
+    const pick = await vscode.window.showQuickPick(items, {
+      title: 'CC Speaker — Pick a voice',
+      placeHolder: 'Search voices...',
+    });
+    if (!pick) { return; }
+    await config.update('voice.tts.voice', pick.voice, vscode.ConfigurationTarget.Global);
+    vscode.window.showInformationMessage(
+      `CC Speaker: Voice set to "${pick.voice || 'system default'}"`
+    );
+  }
+
   // ── Internal helpers ──────────────────────────────────────────────────────
+
+  private scheduleSpeak(text: string): void {
+    clearTimeout(this.pendingSpeakTimer);
+    const COOLDOWN_MS = 2000;
+    const trySpeak = () => {
+      const elapsed = Date.now() - this.lastTypedAt;
+      if (elapsed >= COOLDOWN_MS) {
+        this.speak(text);
+      } else {
+        this.pendingSpeakTimer = setTimeout(trySpeak, COOLDOWN_MS - elapsed);
+      }
+    };
+    // Small initial debounce so rapid file-write events collapse into one
+    this.pendingSpeakTimer = setTimeout(trySpeak, 300);
+  }
 
   private drainQueue(): void {
     if (this.queue.length === 0) { return; }
@@ -189,13 +223,35 @@ export class TTSController implements vscode.Disposable {
     text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
     // Horizontal rules
     text = text.replace(/^[-*_]{3,}\s*$/gm, '');
+
+    // ── Pronunciation fixes ────────────────────────────────────────────────
+    // 1. Known words the TTS engine mispronounces — add entries as needed
+    const substitutions: Record<string, string> = {
+      'README':  'read me',
+      'plugin':  'plug in',
+      'plugins': 'plug ins',
+    };
+    for (const [word, replacement] of Object.entries(substitutions)) {
+      text = text.replace(new RegExp(`\\b${word}\\b`, 'gi'), replacement);
+    }
+
+    // 2. CamelCase / PascalCase → insert spaces
+    //    "HTMLParser" → "HTML Parser", "AudioBridge" → "Audio Bridge"
+    text = text.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+    //    "camelCase" → "camel Case", "ComfyUI" → "Comfy UI"
+    text = text.replace(/([a-z\d])([A-Z])/g, '$1 $2');
+
+    // 3. Remaining ALL_CAPS words (2+ letters) → spell out letter by letter
+    //    "API" → "A P I", "CSS" → "C S S"
+    text = text.replace(/\b([A-Z]{2,})\b/g, (match) => match.split('').join(' '));
+
     // Collapse whitespace
     text = text.replace(/\s+/g, ' ').trim();
     return text;
   }
 
   dispose(): void {
-    if (this.debounceTimer) { clearTimeout(this.debounceTimer); }
+    clearTimeout(this.pendingSpeakTimer);
     if (this.fileWatcher) { this.fileWatcher.close(); }
     this.disposables.forEach((d) => d.dispose());
   }
