@@ -4,6 +4,10 @@
   "description": "Voice capabilities for Claude VS Code — TTS and STT via Web Speech API",
   "version": "0.1.0",
   "publisher": "vscode-cc-speaker",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickxar1/vscode-cc-speaker"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -68,12 +72,7 @@
           "default": true,
           "description": "Enable text-to-speech"
         },
-        "voice.tts.autoRead": {
-          "type": "boolean",
-          "default": true,
-          "description": "Auto-read Claude responses as they appear"
-        },
-        "voice.tts.rate": {
+"voice.tts.rate": {
           "type": "number",
           "default": 1,
           "minimum": 0.5,
